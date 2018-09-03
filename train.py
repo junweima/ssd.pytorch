@@ -2,6 +2,7 @@ from data import *
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from ssd import build_ssd
+from ssd_mb import build_mobile_ssd
 import os
 import sys
 import time
@@ -27,7 +28,8 @@ parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO'],
                     type=str, help='VOC or COCO')
 parser.add_argument('--dataset_root', default=VOC_ROOT,
                     help='Dataset root directory path')
-parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
+# parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
+parser.add_argument('--basenet', default='mobilenet_v2.pth.tar',
                     help='Pretrained base model')
 parser.add_argument('--batch_size', default=32, type=int,
                     help='Batch size for training')
@@ -35,7 +37,7 @@ parser.add_argument('--resume', default=None, type=str,
                     help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--start_iter', default=0, type=int,
                     help='Resume training at this iter')
-parser.add_argument('--num_workers', default=4, type=int,
+parser.add_argument('--num_workers', default=16, type=int,
                     help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use CUDA to train model')
@@ -51,6 +53,8 @@ parser.add_argument('--visdom', default=False, type=str2bool,
                     help='Use visdom for loss visualization')
 parser.add_argument('--save_folder', default='weights/',
                     help='Directory for saving checkpoint models')
+parser.add_argument('--mbv2_base', default=True, type=str2bool, 
+                    help='whether using mbv2 base or not')
 args = parser.parse_args()
 
 
@@ -92,7 +96,11 @@ def train():
         import visdom
         viz = visdom.Visdom()
 
-    ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'])
+    if not args.mbv2_base:
+        ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'])
+    else:
+        ssd_net = build_mobile_ssd('train', cfg['min_dim'], cfg['num_classes'])
+
     net = ssd_net
 
     if args.cuda:
@@ -102,10 +110,14 @@ def train():
     if args.resume:
         print('Resuming training, loading {}...'.format(args.resume))
         ssd_net.load_weights(args.resume)
-    else:
+    elif not args.mbv2_base: # load vgg weights
         vgg_weights = torch.load(args.save_folder + args.basenet)
         print('Loading base network...')
         ssd_net.vgg.load_state_dict(vgg_weights)
+    else: # load mbv2 weights
+        mbv2_weights = torch.load(args.save_folder + args.basenet)
+        print('Loading base network...')
+        ssd_net.mbv2.load_state_dict(mbv2_weights)
 
     if args.cuda:
         net = net.cuda()
@@ -162,7 +174,12 @@ def train():
             adjust_learning_rate(optimizer, args.gamma, step_index)
 
         # load train data
-        images, targets = next(batch_iterator)
+        # images, targets = next(batch_iterator)
+        try:
+            images, targets = next(batch_iterator)
+        except StopIteration:
+            batch_iterator = iter(data_loader)
+            images, targets = next(batch_iterator)
 
         if args.cuda:
             images = Variable(images.cuda())

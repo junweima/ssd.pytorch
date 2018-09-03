@@ -1,3 +1,159 @@
+## TODO list
+  - [ ] check todo list: L2 norm
+  - [ ] train mb on pascal
+  - [ ] train distillation
+
+
+## vgg base network for voc2007
+<pre>
+AP for aeroplane = 0.8172
+AP for bicycle = 0.8544
+AP for bird = 0.7572
+AP for boat = 0.6958
+AP for bottle = 0.4990
+AP for bus = 0.8480
+AP for car = 0.8572
+AP for cat = 0.8737
+AP for chair = 0.6142
+AP for cow = 0.8233
+AP for diningtable = 0.7917
+AP for dog = 0.8559
+AP for horse = 0.8709
+AP for motorbike = 0.8474
+AP for person = 0.7893
+AP for pottedplant = 0.5000
+AP for sheep = 0.7745
+AP for sofa = 0.7912
+AP for train = 0.8616
+AP for tvmonitor = 0.7631
+Mean AP = 0.7743
+~~~~~~~~
+Results:
+0.817
+0.854
+0.757
+0.696
+0.499
+0.848
+0.857
+0.874
+0.614
+0.823
+0.792
+0.856
+0.871
+0.847
+0.789
+0.500
+0.774
+0.791
+0.862
+0.763
+0.774
+~~~~~~~~
+
+</pre>
+
+## vgg base network on voc 2007, trained from initialization, #steps=30k
+<pre>
+AP for aeroplane = 0.7655
+AP for bicycle = 0.8044
+AP for bird = 0.7220
+AP for boat = 0.6612
+AP for bottle = 0.4301
+AP for bus = 0.7934
+AP for car = 0.8286
+AP for cat = 0.8655
+AP for chair = 0.5367
+AP for cow = 0.7415
+AP for diningtable = 0.6844
+AP for dog = 0.8104
+AP for horse = 0.8251
+AP for motorbike = 0.7923
+AP for person = 0.7572
+AP for pottedplant = 0.4366
+AP for sheep = 0.7086
+AP for sofa = 0.7496
+AP for train = 0.8410
+AP for tvmonitor = 0.7240
+Mean AP = 0.7239
+~~~~~~~~
+Results:
+0.765
+0.804
+0.722
+0.661
+0.430
+0.793
+0.829
+0.865
+0.537
+0.742
+0.684
+0.810
+0.825
+0.792
+0.757
+0.437
+0.709
+0.750
+0.841
+0.724
+0.724
+~~~~~~~~
+
+</pre>
+
+
+## vgg base network on voc 2007, trained from initialization, #steps=90k
+<pre>
+P for aeroplane = 0.7966
+AP for bicycle = 0.8298
+AP for bird = 0.7468
+AP for boat = 0.7191
+AP for bottle = 0.4937
+AP for bus = 0.8537
+AP for car = 0.8599
+AP for cat = 0.8851
+AP for chair = 0.6089
+AP for cow = 0.8301
+AP for diningtable = 0.7662
+AP for dog = 0.8497
+AP for horse = 0.8696
+AP for motorbike = 0.8312
+AP for person = 0.7844
+AP for pottedplant = 0.4996
+AP for sheep = 0.7884
+AP for sofa = 0.7885
+AP for train = 0.8494
+AP for tvmonitor = 0.7618
+Mean AP = 0.7706
+~~~~~~~~
+Results:
+0.797
+0.830
+0.747
+0.719
+0.494
+0.854
+0.860
+0.885
+0.609
+0.830
+0.766
+0.850
+0.870
+0.831
+0.784
+0.500
+0.788
+0.789
+0.849
+0.762
+0.771
+~~~~~~~~
+</pre>
+
 # SSD: Single Shot MultiBox Object Detector, in PyTorch
 A [PyTorch](http://pytorch.org/) implementation of [Single Shot MultiBox Detector](http://arxiv.org/abs/1512.02325) from the 2016 paper by Wei Liu, Dragomir Anguelov, Dumitru Erhan, Christian Szegedy, Scott Reed, Cheng-Yang, and Alexander C. Berg.  The official and original Caffe code can be found [here](https://github.com/weiliu89/caffe/tree/ssd).
 
