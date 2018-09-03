@@ -3,6 +3,7 @@ from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from ssd import build_ssd
 from ssd_mb import build_mobile_ssd
+from ssd import build_ssd
 import os
 import sys
 import time
@@ -29,9 +30,11 @@ parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO'],
 parser.add_argument('--dataset_root', default=VOC_ROOT,
                     help='Dataset root directory path')
 # parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
+parser.add_argument('--pretrained_vgg', default='ssd300_mAP_77.43_v2.pth',
+                    help='Pretrained base model')
 parser.add_argument('--basenet', default='mobilenet_v2.pth.tar',
                     help='Pretrained base model')
-parser.add_argument('--batch_size', default=32, type=int,
+parser.add_argument('--batch_size', default=24, type=int,
                     help='Batch size for training')
 parser.add_argument('--resume', default=None, type=str,
                     help='Checkpoint state_dict file to resume training from')
@@ -55,6 +58,8 @@ parser.add_argument('--save_folder', default='weights/',
                     help='Directory for saving checkpoint models')
 parser.add_argument('--mbv2_base', default=True, type=str2bool, 
                     help='whether using mbv2 base or not')
+parser.add_argument('--train_kd', default=True, type=str2bool,
+                    help='training knowledge distillation')
 args = parser.parse_args()
 
 
@@ -101,6 +106,9 @@ def train():
     else:
         ssd_net = build_mobile_ssd('train', cfg['min_dim'], cfg['num_classes'])
 
+    if args.train_kd:
+        teacher = build_ssd('test', cfg['min_dim'], cfg['num_classes'])
+
     net = ssd_net
 
     if args.cuda:
@@ -119,8 +127,13 @@ def train():
         print('Loading base network...')
         ssd_net.mbv2.load_state_dict(mbv2_weights)
 
+    if args.train_kd:
+        print('Using teacher pretrained weights, loading {}...'.format(args.pretrained_vgg))
+        teacher.load_weights(args.save_folder + args.pretrained_vgg)
+
     if args.cuda:
         net = net.cuda()
+        teacher = teacher.cuda()
 
     if not args.resume:
         print('Initializing weights...')
@@ -135,6 +148,8 @@ def train():
                              False, args.cuda)
 
     net.train()
+    if args.train_kd:
+        teacher.eval()
     # loss counters
     loc_loss = 0
     conf_loss = 0
@@ -192,7 +207,45 @@ def train():
         out = net(images)
         # backprop
         optimizer.zero_grad()
-        loss_l, loss_c = criterion(out, targets)
+        
+        if args.train_kd:
+            detections = teacher(images)
+            t_targets = [] # the final teacher detection targets for all images
+            for i_image in range(detections.size(0)): 
+                t_target = None # teacher detection target for 1 image
+                for i_class in range(1, detections.size(1)):
+                    t_mask = (detections[i_image, i_class, :, 0] >= 0.6)
+                    if t_target is None:
+                        t_dets = detections[i_image, i_class, t_mask, 1:]
+                        if t_dets.size(0) == 0:
+                            continue
+                        t_class = torch.Tensor([float(i_class-1)]).unsqueeze(0).expand_as(t_dets[:,0].unsqueeze(1))
+                        t_target = torch.cat((t_dets, t_class), 1).contiguous()
+                    else:
+                        t_dets = detections[i_image, i_class, t_mask, 1:]
+                        if t_dets.size(0) == 0:
+                            continue
+                        t_class = torch.Tensor([float(i_class-1)]).unsqueeze(0).expand_as(t_dets[:,0].unsqueeze(1))
+                        add_target = torch.cat((t_dets, t_class), 1).contiguous()
+                        t_target = torch.cat((t_target, add_target), 0).contiguous()
+                # handle the case when all of the teacher's predictions are below conf threshold = 0.6
+                if t_target is None:
+                    idx = detections[i_image, 1:, :, 0].view(-1).sort(descending=True)
+                    n_prior_boxes = detections.size(2)
+                    t_dets = detections[i_image, int(idx[1][0]/n_prior_boxes), idx[1][0]%n_prior_boxes, 1:].unsqueeze(0)
+                    t_class = (torch.Tensor([float(int(idx[1][0]/n_prior_boxes))])).unsqueeze(0)
+                    if t_target is None:
+                        t_target = torch.cat((t_dets, t_class), 1).contiguous()
+                    else:
+                        add_target = torch.cat((t_dets, t_class), 1).contiguous()
+                        t_target = torch.cat((t_target, add_target), 0).contiguous()
+
+                t_targets.append(t_target.detach())
+            # knowledge distillation loss
+            loss_l, loss_c = criterion(out, t_targets)
+        else:
+            loss_l, loss_c = criterion(out, targets)
+        
         loss = loss_l + loss_c
         loss.backward()
         optimizer.step()

@@ -1,8 +1,157 @@
 ## TODO list
   - [ ] check todo list: L2 norm
-  - [ ] train mb on pascal
+  - [x] train mb on pascal
   - [ ] train distillation
 
+
+
+## mbv2 base network for voc2007, #steps=115k
+<pre>
+AP for aeroplane = 0.6978
+AP for bicycle = 0.7376
+AP for bird = 0.5395
+AP for boat = 0.4980
+AP for bottle = 0.2099
+AP for bus = 0.7193
+AP for car = 0.7194
+AP for cat = 0.7962
+AP for chair = 0.3492
+AP for cow = 0.6243
+AP for diningtable = 0.6840
+AP for dog = 0.7590
+AP for horse = 0.8096
+AP for motorbike = 0.7370
+AP for person = 0.6293
+AP for pottedplant = 0.3196
+AP for sheep = 0.6142
+AP for sofa = 0.7165
+AP for train = 0.7761
+AP for tvmonitor = 0.5842
+Mean AP = 0.6260
+~~~~~~~~
+Results:
+0.698
+0.738
+0.539
+0.498
+0.210
+0.719
+0.719
+0.796
+0.349
+0.624
+0.684
+0.759
+0.810
+0.737
+0.629
+0.320
+0.614
+0.716
+0.776
+0.584
+0.626
+~~~~~~~~
+</pre>
+
+
+## mbv2 base network for voc 2007, #steps=75k
+<pre>
+AP for aeroplane = 0.6515
+AP for bicycle = 0.7008
+AP for bird = 0.4873
+AP for boat = 0.4413
+AP for bottle = 0.1932
+AP for bus = 0.6833
+AP for car = 0.6896
+AP for cat = 0.7884
+AP for chair = 0.2930
+AP for cow = 0.5879
+AP for diningtable = 0.6600
+AP for dog = 0.7137
+AP for horse = 0.7783
+AP for motorbike = 0.7021
+AP for person = 0.6021
+AP for pottedplant = 0.2934
+AP for sheep = 0.5610
+AP for sofa = 0.6901
+AP for train = 0.7440
+AP for tvmonitor = 0.5362
+Mean AP = 0.5899
+~~~~~~~~
+Results:
+0.652
+0.701
+0.487
+0.441
+0.193
+0.683
+0.690
+0.788
+0.293
+0.588
+0.660
+0.714
+0.778
+0.702
+0.602
+0.293
+0.561
+0.690
+0.744
+0.536
+0.590
+~~~~~~~~
+</pre>
+
+## mbv2 base network for voc2007, #steps=25k
+<pre>
+AP for aeroplane = 0.5934
+AP for bicycle = 0.6147
+AP for bird = 0.4668
+AP for boat = 0.4075
+AP for bottle = 0.1614
+AP for bus = 0.6427
+AP for car = 0.6325
+AP for cat = 0.7778
+AP for chair = 0.2636
+AP for cow = 0.5466
+AP for diningtable = 0.5963
+AP for dog = 0.6785
+AP for horse = 0.7603
+AP for motorbike = 0.6197
+AP for person = 0.5619
+AP for pottedplant = 0.2259
+AP for sheep = 0.5219
+AP for sofa = 0.6461
+AP for train = 0.7401
+AP for tvmonitor = 0.4979
+Mean AP = 0.5478
+~~~~~~~~
+Results:
+0.593
+0.615
+0.467
+0.407
+0.161
+0.643
+0.633
+0.778
+0.264
+0.547
+0.596
+0.678
+0.760
+0.620
+0.562
+0.226
+0.522
+0.646
+0.740
+0.498
+0.548
+~~~~~~~~
+</pre>
 
 ## vgg base network for voc2007
 <pre>
@@ -286,7 +435,7 @@ You can specify the parameters listed in the `eval.py` file by flagging them or 
     1. If you installed PyTorch with [conda](https://www.continuum.io/downloads) (recommended), then you should already have it.  (Just  navigate to the ssd.pytorch cloned repo and run):
     `jupyter notebook`
 
-    2. If using [pip](https://pypi.python.org/pypi/pip):
+    1. If using [pip](https://pypi.python.org/pypi/pip):
 
 ```Shell
 # make sure pip is upgraded
