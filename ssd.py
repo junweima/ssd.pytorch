@@ -47,7 +47,7 @@ class SSD(nn.Module):
             self.softmax = nn.Softmax(dim=-1)
             self.detect = Detect(num_classes, 0, 200, 0.01, 0.45)
 
-    def forward(self, x):
+    def forward(self, x, apply_mixup=False, mixup_batches=None, mixup_lambda=0.5):
         """Applies network layers and ops on input image(s) x.
 
         Args:
@@ -71,8 +71,25 @@ class SSD(nn.Module):
         conf = list()
 
         # apply vgg up to conv4_3 relu
-        for k in range(23):
-            x = self.vgg[k](x)
+        if apply_mixup and self.phase == 'train':
+            assert mixup_batches is not None, 'mixup batches cannot be None for manifold mixup'
+            for k in range(5):
+                x = self.vgg[k](x)
+                
+            x1 = x[mixup_batches[0], ...]
+            x2 = x[mixup_batches[1], ...]
+            x = mixup_lambda * x1 + (1-mixup_lambda) * x2
+
+            for k in range(5, 23):
+                x = self.vgg[k](x)
+
+        elif not apply_mixup and self.phase == 'train':
+            for k in range(23):
+                x = self.vgg[k](x)
+        else:
+            assert self.phase == 'test', 'wrong input'
+            for k in range(23):
+                x = self.vgg[k](x)
 
         s = self.L2Norm(x)
         sources.append(s)

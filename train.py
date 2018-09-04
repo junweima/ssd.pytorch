@@ -34,7 +34,7 @@ parser.add_argument('--pretrained_vgg', default='ssd300_mAP_77.43_v2.pth',
                     help='Pretrained base model')
 parser.add_argument('--basenet', default='mobilenet_v2.pth.tar',
                     help='Pretrained base model')
-parser.add_argument('--batch_size', default=24, type=int,
+parser.add_argument('--batch_size', default=23, type=int,
                     help='Batch size for training')
 parser.add_argument('--resume', default=None, type=str,
                     help='Checkpoint state_dict file to resume training from')
@@ -60,6 +60,10 @@ parser.add_argument('--mbv2_base', default=True, type=str2bool,
                     help='whether using mbv2 base or not')
 parser.add_argument('--train_kd', default=True, type=str2bool,
                     help='training knowledge distillation')
+parser.add_argument('--input_mixup', default=False, type=str2bool,
+                    help='training with input mixup')
+parser.add_argument('--manifold_mixup', default=True, type=str2bool,
+                    help='training with manifold mixup')
 args = parser.parse_args()
 
 
@@ -75,6 +79,15 @@ else:
 
 if not os.path.exists(args.save_folder):
     os.mkdir(args.save_folder)
+
+
+def apply_input_mixup(images, alpha=0.2):
+    batch_size = images.shape[0]
+    mixup_lambda = np.random.beta(alpha, alpha)
+    batch1 = np.random.choice(batch_size, batch_size)
+    batch2 = np.random.choice(batch_size, batch_size)
+    images = mixup_lambda * images[batch1, ...] + (1-mixup_lambda) * images[batch2, ...]
+    return images
 
 
 def train():
@@ -192,9 +205,13 @@ def train():
         # images, targets = next(batch_iterator)
         try:
             images, targets = next(batch_iterator)
+            if args.train_kd and args.input_mixup:
+                images = apply_input_mixup(images)
         except StopIteration:
             batch_iterator = iter(data_loader)
             images, targets = next(batch_iterator)
+            if args.train_kd and args.input_mixup:
+                images = apply_input_mixup(images)
 
         if args.cuda:
             images = Variable(images.cuda())
@@ -202,14 +219,28 @@ def train():
         else:
             images = Variable(images)
             targets = [Variable(ann, volatile=True) for ann in targets]
-        # forward
+        
+        # calculate mixup batches
+        if args.manifold_mixup:
+            batch_size = images.shape[0]
+            mixup_batches = [
+                np.random.choice(batch_size, batch_size),
+                np.random.choice(batch_size, batch_size)
+            ]
+            alpha = 0.2
+            mixup_lambda = np.random.beta(alpha, alpha)
+        else:
+            mixup_batches = None
+            mixup_lambda = None
+
+        # forward 
         t0 = time.time()
-        out = net(images)
+        out = net(images, apply_mixup=args.manifold_mixup, mixup_batches=mixup_batches, mixup_lambda=mixup_lambda)
         # backprop
         optimizer.zero_grad()
         
         if args.train_kd:
-            detections = teacher(images)
+            detections = teacher(images, apply_mixup=args.manifold_mixup, mixup_batches=mixup_batches)
             t_targets = [] # the final teacher detection targets for all images
             for i_image in range(detections.size(0)): 
                 t_target = None # teacher detection target for 1 image

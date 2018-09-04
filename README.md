@@ -1,8 +1,58 @@
 ## TODO list
   - [ ] check todo list: L2 norm
   - [x] train mb on pascal
-  - [ ] train distillation
+  - [x] train vanilla distillation
+  - [ ] train knowledgify
 
+
+## mbv2 vanilla kd for voc2007, #steps=5k
+<pre>
+AP for aeroplane = 0.4698
+AP for bicycle = 0.4652
+AP for bird = 0.4024
+AP for boat = 0.2098
+AP for bottle = 0.1276
+AP for bus = 0.5447
+AP for car = 0.5571
+AP for cat = 0.6314
+AP for chair = 0.1936
+AP for cow = 0.2941
+AP for diningtable = 0.3454
+AP for dog = 0.5634
+AP for horse = 0.6083
+AP for motorbike = 0.4973
+AP for person = 0.4818
+AP for pottedplant = 0.1356
+AP for sheep = 0.3062
+AP for sofa = 0.3900
+AP for train = 0.5787
+AP for tvmonitor = 0.3909
+Mean AP = 0.4097
+~~~~~~~~
+Results:
+0.470
+0.465
+0.402
+0.210
+0.128
+0.545
+0.557
+0.631
+0.194
+0.294
+0.345
+0.563
+0.608
+0.497
+0.482
+0.136
+0.306
+0.390
+0.579
+0.391
+0.410
+~~~~~~~~
+</pre>
 
 
 ## mbv2 base network for voc2007, #steps=115k
