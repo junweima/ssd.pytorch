@@ -2,7 +2,9 @@
   - [ ] check todo list: L2 norm
   - [x] train mb on pascal
   - [x] train vanilla distillation
-  - [ ] train knowledgify
+  - [x] train knowledgify
+  - [ ] feature map matching for pretraining
+  - [ ] check the number of bounding boxes predicted
 
 
 ## mbv2 vanilla kd for voc2007, #steps=5k

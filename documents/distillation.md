@@ -97,6 +97,58 @@ Results:
 ~~~~~~~~
 </pre>
 
+
+## vanilla distillation #steps=115k
+<pre>
+AP for aeroplane = 0.6844
+AP for bicycle = 0.7468
+AP for bird = 0.5276
+AP for boat = 0.5155
+AP for bottle = 0.1946
+AP for bus = 0.7327
+AP for car = 0.7200
+AP for cat = 0.8084
+AP for chair = 0.3768
+AP for cow = 0.6442
+AP for diningtable = 0.7008
+AP for dog = 0.7697
+AP for horse = 0.8104
+AP for motorbike = 0.7258
+AP for person = 0.6280
+AP for pottedplant = 0.3183
+AP for sheep = 0.6005
+AP for sofa = 0.7368
+AP for train = 0.7868
+AP for tvmonitor = 0.5819
+Mean AP = 0.6305
+~~~~~~~~
+Results:
+0.684
+0.747
+0.528
+0.516
+0.195
+0.733
+0.720
+0.808
+0.377
+0.644
+0.701
+0.770
+0.810
+0.726
+0.628
+0.318
+0.600
+0.737
+0.787
+0.582
+0.631
+~~~~~~~~
+</pre>
+
+
+
 ## distillation input mixup (0.5) #steps=30k
 <pre>
 AP for aeroplane = 0.5999

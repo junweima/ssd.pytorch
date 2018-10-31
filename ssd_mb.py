@@ -48,6 +48,8 @@ class SSDMobile(nn.Module):
             self.softmax = nn.Softmax(dim=-1)
             self.detect = Detect(num_classes, 0, 200, 0.01, 0.45)
 
+        self.adapter = nn.Conv2d(32, 512, 1, 1, 0, bias=False)
+
     def forward(self, x, apply_mixup=False, mixup_batches=None, mixup_lambda=0.5):
         """Applies network layers and ops on input image(s) x.
 
@@ -73,26 +75,36 @@ class SSDMobile(nn.Module):
 
         if apply_mixup and self.phase == 'train':
             assert mixup_batches is not None, 'mixup batches cannot be None for manifold mixup'
-            x = self.mbv2.features[:4](x)
+            x = self.mbv2.features[:1](x)
+            x = self.mbv2.features[1:7](x)
+            x_intermediate = x
+
             # apply manifold mixup
             x1 = x[mixup_batches[0], ...]
             x2 = x[mixup_batches[1], ...]
             x = mixup_lambda * x1 + (1-mixup_lambda) * x2
-            x = self.mbv2.features[4:7](x)
+
         elif not apply_mixup and self.phase == 'train':
             # feature map size of [6] =  38^2  * 32
             x = self.mbv2.features[:7](x)
+            x_intermediate = None
         else:
             assert self.phase == 'test', 'wrong input'
             # feature map size of [6] =  38^2  * 32
             x = self.mbv2.features[:7](x)
+            x_intermediate = None
+
 
         # normalization according to the experiment section in ssd paper
         s = self.L2Norm(x)
         sources.append(s)
 
+        # feature map size of 19^2 * 96
+        x = self.mbv2.features[7:13](x)
+        sources.append(x)
+
         # feature map size of [-1] = 10^2 * 1280
-        x = self.mbv2.features[7:-1](x)
+        x = self.mbv2.features[13:-1](x)
         sources.append(x)
 
         # apply extra layers and cache source layer outputs
@@ -122,7 +134,15 @@ class SSDMobile(nn.Module):
                 conf.view(conf.size(0), -1, self.num_classes),
                 self.priors
             )
-        return output
+
+        if self.phase == 'train' and apply_mixup:
+            x_intermediate = self.adapter(x_intermediate)
+        else:
+            x_intermediate = None
+
+        # import pdb; pdb.set_trace()
+
+        return output, x_intermediate
 
     def load_weights(self, base_file):
         other, ext = os.path.splitext(base_file)
@@ -155,13 +175,13 @@ def add_extras(cfg, i, batch_norm=False):
 def multibox(mbv2, extra_layers, cfg, num_classes):
     loc_layers = []
     conf_layers = []
-    mbv2_source = [6, -2] # see documents/mobilenetV2.md
+    mbv2_source = [6, 13, -2] # see documents/mobilenetV2.md
     for k, v in enumerate(mbv2_source):
         loc_layers += [nn.Conv2d(mbv2.features[v]._modules['conv'][-2].out_channels,
                                  cfg[k] * 4, kernel_size=3, padding=1)]
         conf_layers += [nn.Conv2d(mbv2.features[v]._modules['conv'][-2].out_channels,
                         cfg[k] * num_classes, kernel_size=3, padding=1)]
-    for k, v in enumerate(extra_layers[1::2], 2):
+    for k, v in enumerate(extra_layers[1::2], len(mbv2_source)):
         loc_layers += [nn.Conv2d(v.out_channels, cfg[k]
                                  * 4, kernel_size=3, padding=1)]
         conf_layers += [nn.Conv2d(v.out_channels, cfg[k]
@@ -175,7 +195,7 @@ extras = {
     '512': [],
 }
 mbox = {
-    '300': [4, 6, 6, 4, 4],  # number of boxes per feature map location
+    '300': [4, 6, 6, 6, 4, 4],  # number of boxes per feature map location, determined by config.aspect_ratios
     '512': [],
 }
 

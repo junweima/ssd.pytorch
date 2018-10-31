@@ -385,7 +385,11 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
         if args.cuda:
             x = x.cuda()
         _t['im_detect'].tic()
-        detections = net(x).data
+        if args.mbv2_base:
+            detections, _ = net(x)
+        else:
+            _, detections, _ = net(x)
+        detections = detections.data
         detect_time = _t['im_detect'].toc(average=False)
 
         # skip j = 0, because it's the background class

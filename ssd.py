@@ -43,9 +43,9 @@ class SSD(nn.Module):
         self.loc = nn.ModuleList(head[0])
         self.conf = nn.ModuleList(head[1])
 
-        if phase == 'test':
-            self.softmax = nn.Softmax(dim=-1)
-            self.detect = Detect(num_classes, 0, 200, 0.01, 0.45)
+        # if phase == 'test': # jm edit: allow teacher to output both train and test detections
+        self.softmax = nn.Softmax(dim=-1)
+        self.detect = Detect(num_classes, 0, 200, 0.01, 0.45)
 
     def forward(self, x, apply_mixup=False, mixup_batches=None, mixup_lambda=0.5):
         """Applies network layers and ops on input image(s) x.
@@ -73,23 +73,44 @@ class SSD(nn.Module):
         # apply vgg up to conv4_3 relu
         if apply_mixup and self.phase == 'train':
             assert mixup_batches is not None, 'mixup batches cannot be None for manifold mixup'
-            for k in range(5):
+            for k in range(1):
                 x = self.vgg[k](x)
-                
+            
+            for k in range(1, 23):
+                x = self.vgg[k](x)
+            
+            x_intermediate = x
+
             x1 = x[mixup_batches[0], ...]
             x2 = x[mixup_batches[1], ...]
             x = mixup_lambda * x1 + (1-mixup_lambda) * x2
 
-            for k in range(5, 23):
-                x = self.vgg[k](x)
-
         elif not apply_mixup and self.phase == 'train':
             for k in range(23):
                 x = self.vgg[k](x)
+
+            x_intermediate = None
         else:
             assert self.phase == 'test', 'wrong input'
-            for k in range(23):
-                x = self.vgg[k](x)
+            if not apply_mixup:
+                for k in range(23):
+                    x = self.vgg[k](x)
+
+                x_intermediate = None
+            else:
+                assert mixup_batches is not None, 'mixup batches cannot be None for manifold mixup'
+                for k in range(1):
+                    x = self.vgg[k](x)
+
+                for k in range(1, 23):
+                    x = self.vgg[k](x)    
+                
+                x_intermediate = x
+
+                x1 = x[mixup_batches[0], ...]
+                x2 = x[mixup_batches[1], ...]
+                x = mixup_lambda * x1 + (1-mixup_lambda) * x2
+
 
         s = self.L2Norm(x)
         sources.append(s)
@@ -109,23 +130,29 @@ class SSD(nn.Module):
         for (x, l, c) in zip(sources, self.loc, self.conf):
             loc.append(l(x).permute(0, 2, 3, 1).contiguous())
             conf.append(c(x).permute(0, 2, 3, 1).contiguous())
+        # import pdb; pdb.set_trace()
 
         loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
         conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
-        if self.phase == "test":
-            output = self.detect(
-                loc.view(loc.size(0), -1, 4),                   # loc preds
-                self.softmax(conf.view(conf.size(0), -1,
-                             self.num_classes)),                # conf preds
-                self.priors.type(type(x.data))                  # default boxes
-            )
-        else:
-            output = (
-                loc.view(loc.size(0), -1, 4),
-                conf.view(conf.size(0), -1, self.num_classes),
-                self.priors
-            )
-        return output
+
+        # jm edit: allow teacher to output both train and test detections
+        # if self.phase == "test":
+        output_detections = self.detect(
+            loc.view(loc.size(0), -1, 4),                   # loc preds
+            self.softmax(conf.view(conf.size(0), -1,
+                            self.num_classes)),                # conf preds
+            self.priors.type(type(x.data))                  # default boxes
+        )
+        # else:
+        output = (
+            loc.view(loc.size(0), -1, 4),
+            conf.view(conf.size(0), -1, self.num_classes),
+            self.priors
+        )
+
+        return output, output_detections, x_intermediate
+        
+        # return output, x_intermediate
 
     def load_weights(self, base_file):
         other, ext = os.path.splitext(base_file)
